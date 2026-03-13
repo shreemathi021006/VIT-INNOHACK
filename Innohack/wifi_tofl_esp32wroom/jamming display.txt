@@ -1,0 +1,49 @@
+import serial
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1. USE THE BLUETOOTH COM PORT HERE (Not the USB one!)
+# MATLAB uses the USB one. Python uses this one.
+BT_PORT = 'COM2' 
+
+try:
+    ser = serial.Serial(BT_PORT, 115200, timeout=1)
+    print(f"Connected to Bluetooth on {BT_PORT}")
+except:
+    print("Could not open Bluetooth Port. Check port number in Bluetooth Settings.")
+    exit()
+
+plt.ion()
+fig, ax = plt.subplots(figsize=(10, 6))
+t = np.linspace(0, 1, 500)
+
+while True:
+    try:
+        line = ser.readline().decode('utf-8').strip()
+        
+        # Check if the ESP32 sent the RSSI keyword
+        if "RSSI" in line:
+            # Extract number from string like "RSSI,-45" or "RSSI:-45"
+            # We split by comma or colon and take the last part
+            parts = line.replace(':', ',').split(',')
+            rssi = float(parts[-1]) 
+
+            # Moving Signal Logic
+            amp = (rssi + 100) / 10
+            clean_wave = amp * np.sin(2 * np.pi * 5 * t)
+            jamming_noise = np.random.normal(0, 1.5, 500)
+            
+            ax.clear()
+            ax.plot(t, clean_wave + jamming_noise, 'r', alpha=0.5, label="Jammed Signal")
+            ax.plot(t, clean_wave, 'b', linewidth=2, label=f"Live RSSI: {rssi}")
+            
+            ax.set_ylim(-5, 15)
+            ax.set_title("Anti-Drone EW Monitor (Bluetooth Stream)")
+            ax.legend(loc='upper right')
+            plt.pause(0.01)
+
+    except Exception as e:
+        continue # Ignore messy data lines
+
+    if not plt.fignum_exists(fig.number):
+        break

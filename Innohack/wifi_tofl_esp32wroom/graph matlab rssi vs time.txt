@@ -1,0 +1,42 @@
+s = serialport("COM4",115200);
+
+figure;
+ylim([-100 0]);
+xlim([0 100])
+title("LIVE RF SIGNAL");
+ylabel("RSSI (dBm)");
+xlabel("Time (seconds)");
+grid on;
+hold on;
+
+rssi_history = [];
+time_history = [];
+t = 0;
+scan_interval = 3; % seconds
+
+while true
+    data = readline(s);
+    disp(data)
+
+    % Extract RSSI number
+    expr = 'RSSI[:,]\s*(-?\d+)';
+    token = regexp(data, expr, 'tokens');
+
+    if ~isempty(token)
+        rssi = str2double(token{1}{1});
+
+        t = t + 1;
+        rssi_history(t) = rssi;
+        time_history(t) = t * scan_interval;
+
+        cla    % clear old plot
+        
+        % ---- LINE ONLY (NO DOTS) ----
+        plot(time_history, rssi_history,'r','LineWidth',2)
+
+        xlim([0 max(time_history)+5])
+        ylim([-100 0])
+
+        drawnow
+    end
+end
